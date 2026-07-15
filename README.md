@@ -7,6 +7,8 @@ project emphasizes methodological rigor: leakage-safe cross-validation,
 real hyperparameter tuning, verified and corrected probability
 calibration, and a subgroup fairness audit.
 
+**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
+
 Inspired by Ahiduzzaman & Hasan (2025), *"Interpretable machine learning
 for cardiovascular risk prediction,"* PLoS One.
 
@@ -16,14 +18,16 @@ readable as a standalone technical report.
 
 ## Interactive Demo
 
-```bash
-streamlit run app/streamlit_app.py
-```
+**[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
 
 Enter a hypothetical patient's clinical and dietary values to obtain a
 calibrated risk estimate with a SHAP-based explanation of the
-prediction. *(Run the notebook once first -- its final step saves the
-model artifact the app depends on.)*
+prediction.
+
+To run it locally instead:
+```bash
+streamlit run app/streamlit_app.py
+```
 
 ## Key Results
 
