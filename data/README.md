@@ -1,9 +1,5 @@
 # Data
 
-This folder is where your NHANES data extract goes.
-
-## Where to get it
-
 This project uses data from the **National Health and Nutrition
 Examination Survey (NHANES)**, 2017-2023 cycles, published by the CDC's
 National Center for Health Statistics. It's public and free:
