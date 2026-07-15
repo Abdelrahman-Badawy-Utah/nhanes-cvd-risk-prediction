@@ -13,8 +13,7 @@ Inspired by Ahiduzzaman & Hasan (2025), *"Interpretable machine learning
 for cardiovascular risk prediction,"* PLoS One.
 
 **The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
-a single notebook with rationale and interpretation preceding each step,
-readable as a standalone technical report.
+a single notebook with rationale and interpretation preceding each step.
 
 ## Interactive Demo
 
