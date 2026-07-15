@@ -1,0 +1,28 @@
+# Data (NHANES extracts can be large and/or subject to redistribution terms --
+# link to the public source in the README instead of committing raw data)
+data/
+*.xlsx
+*.csv
+!results/*.csv
+
+# Model artifacts (regenerate by running run_analysis.py; can be large)
+results/models/*.pkl
+
+# Python
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+*.egg-info/
+
+# Environment
+.venv/
+venv/
+.env
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Editor
+.vscode/
+.idea/

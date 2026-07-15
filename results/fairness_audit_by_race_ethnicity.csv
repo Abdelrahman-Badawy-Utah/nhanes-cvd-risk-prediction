@@ -1,0 +1,7 @@
+,n,AUROC,Recall (Sensitivity),Specificity
+Mexican American,338.0,0.8197,0.7143,0.7886
+Other Hispanic,334.0,0.8807,0.8,0.8026
+Non-Hispanic White,1293.0,0.8206,0.8276,0.656
+Non-Hispanic Black,555.0,0.7519,0.6452,0.7221
+Non-Hispanic Asian,267.0,0.9205,0.8235,0.896
+Other/Multiracial,125.0,0.8535,0.8421,0.7264
