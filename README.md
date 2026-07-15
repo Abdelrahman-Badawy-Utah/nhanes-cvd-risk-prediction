@@ -13,8 +13,7 @@ Inspired by Ahiduzzaman & Hasan (2025), *"Interpretable machine learning
 for cardiovascular risk prediction,"* PLoS One.
 
 **The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
-a single notebook with rationale and interpretation preceding each step,
-readable as a standalone technical report.
+a single notebook with rationale and interpretation preceding each step.
 
 ## Interactive Demo
 
@@ -100,12 +99,7 @@ development, documented in the notebook at the point they occurred:
 pip install -r requirements.txt
 ```
 
-1. Place your NHANES data extract in `data/` (see `data/README.md`).
-2. Open `CVD_Risk_Prediction.ipynb` and update the file path in the
-   first code cell.
-3. Run all cells, top to bottom.
-4. Optionally, launch the interactive demo:
-   `streamlit run app/streamlit_app.py`
+Refer to the "CVD_Risk_Prediction.ipynb" Notebook. 
 
 ## Limitations
 

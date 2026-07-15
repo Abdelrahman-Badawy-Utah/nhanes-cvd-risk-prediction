@@ -7,13 +7,6 @@ and diet numbers, and see:
      thanks to the calibration fix explained in the notebook)
   2. A plain-English explanation of what pushed THEIR risk up or down
 
-BEFORE RUNNING THIS APP: you must first run the notebook
-(CVD_Risk_Prediction.ipynb) once, start to finish. The last cell of the
-notebook saves the trained model to app/model/best_model_artifact.pkl --
-this app simply loads that file and uses it to make live predictions.
-
-Run with:
-    streamlit run app/streamlit_app.py
 
 IMPORTANT: this is a portfolio / demonstration project, not a medical
 device. See the big warning banner in the app itself.
