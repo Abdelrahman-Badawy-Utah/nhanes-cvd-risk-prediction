@@ -1,19 +1,22 @@
 """
 streamlit_app.py
 ================
-Interactive CVD risk calculator. Enter a hypothetical person's clinical
-and dietary values and see:
-  1. Their predicted CVD risk (using the calibrated model, so the
-     percentage shown is a genuinely calibrated probability -- see
-     evaluation.py / the model card for why this matters)
-  2. A SHAP waterfall-style explanation of what pushed THEIR risk up or
-     down, personalized to the exact numbers they entered
+An interactive CVD risk calculator. Enter a hypothetical person's health
+and diet numbers, and see:
+  1. Their predicted CVD risk (a genuinely trustworthy percentage,
+     thanks to the calibration fix explained in the notebook)
+  2. A plain-English explanation of what pushed THEIR risk up or down
+
+BEFORE RUNNING THIS APP: you must first run the notebook
+(CVD_Risk_Prediction.ipynb) once, start to finish. The last cell of the
+notebook saves the trained model to app/model/best_model_artifact.pkl --
+this app simply loads that file and uses it to make live predictions.
 
 Run with:
     streamlit run app/streamlit_app.py
 
-IMPORTANT: this is a portfolio/demonstration tool, not a medical device.
-See the prominent disclaimer in the app itself and in the model card.
+IMPORTANT: this is a portfolio / demonstration project, not a medical
+device. See the big warning banner in the app itself.
 """
 
 import os
@@ -28,43 +31,63 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# Make sure "src" is importable regardless of where streamlit is launched from
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.config import READABLE_NAMES
-
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
-ARTIFACT_PATH = os.path.join(APP_DIR, "..", "results", "models", "best_model_artifact.pkl")
+ARTIFACT_PATH = os.path.join(APP_DIR, "model", "best_model_artifact.pkl")
 
-# Reasonable input ranges for each feature, derived from the training
-# data's observed range. (min, max, default, step, unit_label)
+# Plain-English names for every possible factor (a superset -- whichever
+# ones the notebook actually selected will be looked up from here)
+READABLE_NAMES = {
+    "DR1TPROT": "Protein (g)", "DR1TCARB": "Carbohydrates (g)", "DR1TSUGR": "Total Sugars (g)",
+    "DR1TFIBE": "Fiber (g)", "DR1TSFAT": "Saturated Fat (g)", "DR1TMFAT": "Monounsaturated Fat (g)",
+    "DR1TPFAT": "Polyunsaturated Fat (g)", "DR1TCHOL": "Dietary Cholesterol (mg)",
+    "DR1TBCAR": "Beta-Carotene (mcg)", "DR1TCRYP": "Beta-Cryptoxanthin (mcg)", "DR1TLYCO": "Lycopene (mcg)",
+    "DR1TTHEO": "Theobromine (mg)", "DR1TNIAC": "Niacin / Vitamin B3 (mg)", "DR1TVB6": "Vitamin B6 (mg)",
+    "DR1TFOLA": "Total Folate (mcg)", "DR1TFF": "Food Folate (mcg)", "DR1TIRON": "Iron (mg)",
+    "DR1TVB12": "Vitamin B12 (mcg)", "DR1TVC": "Vitamin C (mg)", "DR1TVD": "Vitamin D (mcg)",
+    "DR1TATOC": "Vitamin E (mg)", "DR1TVK": "Vitamin K (mcg)", "DR1TCALC": "Calcium (mg)",
+    "DR1TPHOS": "Phosphorus (mg)", "DR1TMAGN": "Magnesium (mg)", "DR1TZINC": "Zinc (mg)",
+    "DR1TCOPP": "Copper (mg)", "DR1TSODI": "Sodium (mg)", "DR1TPOTA": "Potassium (mg)",
+    "DR1TSELE": "Selenium (mcg)", "DR1TMOIS": "Food Moisture / Water Content (g)",
+    "BMXBMI": "Body Mass Index (BMI)", "BMXWAIST": "Waist Circumference (cm)",
+    "SBP1": "Systolic Blood Pressure (mmHg)", "DBP1": "Diastolic Blood Pressure (mmHg)",
+    "LBXTC": "Total Cholesterol (mg/dL)", "LBXHSCRP": "C-Reactive Protein (CRP, mg/L)",
+    "RIDAGEYR": "Age (years)",
+}
+
+# Reasonable slider ranges: (min, max, default, step)
 FEATURE_INPUT_CONFIG = {
-    "RIDAGEYR": (18, 85, 50, 1, "years"),
-    "BMXBMI": (15.0, 60.0, 27.0, 0.5, "kg/m^2"),
-    "BMXWAIST": (60.0, 165.0, 95.0, 1.0, "cm"),
-    "SBP1": (90, 220, 120, 1, "mmHg"),
-    "DBP1": (40, 120, 78, 1, "mmHg"),
-    "LBXTC": (80, 300, 190, 1, "mg/dL"),
-    "LBXHSCRP": (0.0, 35.0, 2.0, 0.1, "mg/L"),
-    "DR1TPROT": (0, 260, 75, 1, "g"),
-    "DR1TCARB": (0, 750, 220, 5, "g"),
-    "DR1TSUGR": (0, 275, 85, 1, "g"),
-    "DR1TBCAR": (0, 30000, 2000, 100, "mcg"),
-    "DR1TVB6": (0.0, 9.0, 2.0, 0.1, "mg"),
-    "DR1TFF": (0, 850, 200, 5, "mcg"),
-    "DR1TVC": (0, 370, 80, 5, "mg"),
-    "DR1TVK": (0, 2300, 120, 10, "mcg"),
-    "DR1TCALC": (50, 3200, 870, 10, "mg"),
-    "DR1TMAGN": (50, 950, 280, 5, "mg"),
-    "DR1TCOPP": (0.0, 4.0, 1.1, 0.05, "mg"),
-    "DR1TPOTA": (50, 6000, 2450, 25, "mg"),
-    "DR1TMOIS": (250, 13800, 2650, 50, "g"),
+    "RIDAGEYR": (18, 85, 50, 1),
+    "BMXBMI": (15.0, 60.0, 27.0, 0.5),
+    "BMXWAIST": (60.0, 165.0, 95.0, 1.0),
+    "SBP1": (90, 220, 120, 1),
+    "DBP1": (40, 120, 78, 1),
+    "LBXTC": (80, 300, 190, 1),
+    "LBXHSCRP": (0.0, 35.0, 2.0, 0.1),
+    "DR1TPROT": (0, 260, 75, 1),
+    "DR1TCARB": (0, 750, 220, 5),
+    "DR1TSUGR": (0, 275, 85, 1),
+    "DR1TBCAR": (0, 30000, 2000, 100),
+    "DR1TNIAC": (0.0, 100.0, 22.0, 1.0),
+    "DR1TVB6": (0.0, 9.0, 2.0, 0.1),
+    "DR1TFF": (0, 850, 200, 5),
+    "DR1TIRON": (0.0, 60.0, 15.0, 0.5),
+    "DR1TVB12": (0.0, 30.0, 4.5, 0.1),
+    "DR1TVC": (0, 370, 80, 5),
+    "DR1TVK": (0, 2300, 120, 10),
+    "DR1TCALC": (50, 3200, 870, 10),
+    "DR1TMAGN": (50, 950, 280, 5),
+    "DR1TCOPP": (0.0, 4.0, 1.1, 0.05),
+    "DR1TSODI": (0, 8000, 3200, 50),
+    "DR1TPOTA": (50, 6000, 2450, 25),
+    "DR1TMOIS": (250, 13800, 2650, 50),
 }
 
 FEATURE_GROUPS = {
     "Clinical Measurements": ["RIDAGEYR", "BMXBMI", "BMXWAIST", "SBP1", "DBP1", "LBXTC", "LBXHSCRP"],
-    "Dietary Intake (from a 24-hour recall)": [
-        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TBCAR", "DR1TVB6", "DR1TFF",
-        "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP", "DR1TPOTA", "DR1TMOIS",
+    "Diet (from a single day's recall)": [
+        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TBCAR", "DR1TNIAC", "DR1TVB6", "DR1TFF",
+        "DR1TIRON", "DR1TVB12", "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP",
+        "DR1TSODI", "DR1TPOTA", "DR1TMOIS",
     ],
 }
 
@@ -76,49 +99,35 @@ def load_artifact():
 
 
 @st.cache_resource
-def get_shap_explainer(_pipeline):
-    """Cached so we don't rebuild the SHAP explainer on every interaction.
-    Leading underscore on the parameter tells Streamlit's cache not to
-    try to hash the (unhashable) pipeline object itself."""
-    tree_model = _pipeline.named_steps["clf"]
-    return shap.TreeExplainer(tree_model)
+def get_shap_explainer(_tree_model):
+    """The leading underscore tells Streamlit not to try to hash the
+    (unhashable) model object when deciding whether to reuse the cache."""
+    return shap.TreeExplainer(_tree_model)
 
 
 def predict_risk(artifact, input_values: dict):
-    """Run the calibrated pipeline on one person's input values and
-    return the predicted probability of CVD. Falls back to the
-    uncalibrated pipeline if no calibrated version was saved."""
     features = artifact["selected_features"]
     X_input = pd.DataFrame([[input_values[f] for f in features]], columns=features)
-
     pipeline = artifact.get("calibrated_pipeline") or artifact["pipeline"]
     probability = pipeline.predict_proba(X_input)[:, 1][0]
     return probability, X_input
 
 
 def explain_prediction(artifact, X_input: pd.DataFrame):
-    """Return SHAP values explaining this single prediction."""
-    tree_pipeline = artifact["pipeline"]  # SHAP needs the raw tree model
-    explainer = get_shap_explainer(tree_pipeline)
+    tree_model = artifact["pipeline"].named_steps["predict"]
+    explainer = get_shap_explainer(tree_model)
     shap_values = explainer.shap_values(X_input)
     if isinstance(shap_values, list):
         shap_values = shap_values[1]
     elif isinstance(shap_values, np.ndarray) and shap_values.ndim == 3:
         shap_values = shap_values[:, :, 1]
-    return shap_values[0], explainer.expected_value
+    return shap_values[0]
 
 
-def plot_individual_explanation(shap_row, base_value, X_input, feature_names_readable):
-    """A simple horizontal bar chart of this person's SHAP contributions,
-    sorted by magnitude -- deliberately kept simple/dependency-light
-    rather than using shap's own waterfall plot renderer."""
-    if isinstance(base_value, (list, np.ndarray)):
-        base_value = base_value[1] if len(np.atleast_1d(base_value)) > 1 else base_value[0]
-
+def plot_individual_explanation(shap_row, feature_names_readable):
     order = np.argsort(np.abs(shap_row))[::-1]
     sorted_values = shap_row[order]
     sorted_names = [feature_names_readable[i] for i in order]
-
     colors = ["#d62728" if v > 0 else "#2ca02c" for v in sorted_values]
 
     fig, ax = plt.subplots(figsize=(7, 6))
@@ -126,28 +135,27 @@ def plot_individual_explanation(shap_row, base_value, X_input, feature_names_rea
     ax.set_yticks(range(len(sorted_values)))
     ax.set_yticklabels(sorted_names[::-1])
     ax.axvline(0, color="black", linewidth=0.8)
-    ax.set_xlabel("Contribution to predicted risk (SHAP value)")
-    ax.set_title("What's driving this person's predicted risk?")
+    ax.set_xlabel("Push toward higher risk (right) or lower risk (left)")
+    ax.set_title("What's driving this prediction?")
     plt.tight_layout()
     return fig
 
 
 def main():
-    st.set_page_config(page_title="NHANES CVD Risk Calculator", layout="wide")
+    st.set_page_config(page_title="CVD Risk Calculator", layout="wide")
 
     st.title("Cardiovascular Disease Risk Calculator")
     st.caption(
-        "A portfolio project built on NHANES 2017-2023 data, inspired by "
-        "Ahiduzzaman & Hasan (2025), PLoS One."
+        "A portfolio project built on public NHANES health survey data, "
+        "inspired by Ahiduzzaman & Hasan (2025), PLoS One."
     )
 
     st.warning(
-        "**This is a demonstration / portfolio project, not a medical "
-        "device or diagnostic tool.** It was trained on a research dataset "
-        "with known limitations (see the model card in this repository) "
-        "and should never be used to make real health decisions. If you "
-        "have concerns about your cardiovascular health, please talk to a "
-        "doctor.",
+        "**This is a demonstration project, not a medical device.** It "
+        "was trained on a research dataset with known limitations (see "
+        "the model card in this repository) and should never be used to "
+        "make real health decisions. If you have concerns about your "
+        "cardiovascular health, please talk to a doctor.",
         icon="⚠️",
     )
 
@@ -155,13 +163,13 @@ def main():
         artifact = load_artifact()
     except FileNotFoundError:
         st.error(
-            "No trained model found yet. Run `python run_analysis.py` "
-            "first to train a model and generate the artifact this app "
-            "needs (results/models/best_model_artifact.pkl)."
+            "No trained model found yet. Open and run `CVD_Risk_Prediction.ipynb` "
+            "from start to finish first -- its last step saves the model "
+            "file this app needs (app/model/best_model_artifact.pkl)."
         )
         return
 
-    st.sidebar.header("Enter the person's information")
+    st.sidebar.header("Enter a hypothetical person's information")
     input_values = {}
 
     for group_name, group_features in FEATURE_GROUPS.items():
@@ -170,15 +178,12 @@ def main():
             continue
         st.sidebar.subheader(group_name)
         for feature in available:
-            min_v, max_v, default_v, step_v, unit = FEATURE_INPUT_CONFIG[feature]
-            label = f"{READABLE_NAMES.get(feature, feature)}"
+            min_v, max_v, default_v, step_v = FEATURE_INPUT_CONFIG[feature]
+            label = READABLE_NAMES.get(feature, feature)
             input_values[feature] = st.sidebar.slider(
                 label, min_value=min_v, max_value=max_v, value=default_v, step=step_v
             )
 
-    # Any selected feature without a configured slider (shouldn't normally
-    # happen, but keeps the app from crashing if selected_features ever
-    # includes something not in FEATURE_INPUT_CONFIG) defaults to 0.
     for feature in artifact["selected_features"]:
         if feature not in input_values:
             input_values[feature] = 0
@@ -189,36 +194,31 @@ def main():
         st.subheader("Predicted Risk")
         probability, X_input = predict_risk(artifact, input_values)
         st.metric("Predicted probability of CVD", f"{probability * 100:.1f}%")
-        st.caption(
-            f"Model used: {artifact['model_name']} "
-            f"(calibrated with Platt scaling so this percentage reflects "
-            f"a genuine probability, not just a ranking score)."
-        )
+        st.caption(f"Model used: {artifact['model_name']} (calibrated, so this is a trustworthy percentage).")
 
         if probability > 0.5:
-            st.error("Predicted higher-than-average risk category.")
+            st.error("Higher-than-average predicted risk.")
         elif probability > 0.2:
-            st.warning("Predicted moderate risk category.")
+            st.warning("Moderate predicted risk.")
         else:
-            st.success("Predicted lower-than-average risk category.")
+            st.success("Lower-than-average predicted risk.")
 
     with col2:
         st.subheader("Why did the model predict this?")
-        shap_row, base_value = explain_prediction(artifact, X_input)
+        shap_row = explain_prediction(artifact, X_input)
         readable_names = [READABLE_NAMES.get(f, f) for f in artifact["selected_features"]]
-        fig = plot_individual_explanation(shap_row, base_value, X_input, readable_names)
+        fig = plot_individual_explanation(shap_row, readable_names)
         st.pyplot(fig)
         st.caption(
             "Red bars push the predicted risk up; green bars push it down. "
-            "This explanation is specific to the exact numbers entered on "
-            "the left."
+            "This is personalized to the exact numbers entered on the left."
         )
 
     st.divider()
     st.caption(
         "Data source: National Health and Nutrition Examination Survey "
         "(NHANES) 2017-2023, National Center for Health Statistics. "
-        "This tool is for educational/portfolio purposes only."
+        "Educational/portfolio use only."
     )
 
 

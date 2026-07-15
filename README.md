@@ -1,189 +1,113 @@
-# NHANES Cardiovascular Disease Risk Prediction
+# Cardiovascular Disease Risk Prediction from NHANES Data
 
-An end-to-end, methodologically careful machine learning pipeline that
-predicts cardiovascular disease (CVD) risk from dietary, clinical, and
-demographic data — with real hyperparameter tuning, leakage-safe
-cross-validation, calibrated probabilities, a subgroup fairness audit,
-and an interactive risk calculator.
+A machine learning pipeline that estimates cardiovascular disease (CVD)
+risk from age, blood pressure, cholesterol, body measurements, and
+dietary intake, using public U.S. health survey data (NHANES). The
+project emphasizes methodological rigor: leakage-safe cross-validation,
+real hyperparameter tuning, verified and corrected probability
+calibration, and a subgroup fairness audit.
 
 Inspired by Ahiduzzaman & Hasan (2025), *"Interpretable machine learning
-for cardiovascular risk prediction,"* PLoS One — this project
-independently re-implements the general approach on the same public
-dataset, then goes further: fixing two subtle data-leakage issues,
-adding real hyperparameter search, checking (and fixing) probability
-calibration, and auditing the model for performance gaps across
-demographic subgroups.
+for cardiovascular risk prediction,"* PLoS One.
 
-**[Try the interactive risk calculator](#interactive-risk-calculator)** · **[See the model card](model_card.md)**
+**The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
+a single notebook with rationale and interpretation preceding each step,
+readable as a standalone technical report.
 
----
+## Interactive Demo
 
-## Why this project
-
-Most tutorial-style ML projects stop at "here's an AUROC number." This
-one is built to demonstrate the parts of applied ML that actually matter
-in a health-tech setting: does the evaluation avoid leakage, are the
-predicted probabilities trustworthy, and does the model work equally
-well for everyone it might be used on?
-
-## Key findings
-
-- **All 5 models (Logistic Regression, Random Forest, SVM, XGBoost,
-  LightGBM) land in a tight AUROC band (~0.82-0.83) with heavily
-  overlapping bootstrapped 95% confidence intervals** — meaning no
-  single algorithm is statistically distinguishable from the others on
-  this task. Algorithm choice barely matters here; feature quality and
-  correct evaluation do.
-- **Raw model probabilities were badly miscalibrated** — every model
-  substantially over-predicted risk, a direct side effect of training on
-  oversampled data. Post-hoc calibration (Platt scaling) corrected this
-  (Brier score roughly halved) while leaving AUROC essentially
-  unchanged.
-- **Two real data-leakage bugs were found and fixed during development**
-  (see [Methodology](#methodology)) — including one that inflated a
-  model's cross-validated AUROC to an implausible 0.99 before the fix.
-- **A subgroup fairness audit reveals real performance gaps**: AUROC
-  ranges from ~0.75 (Non-Hispanic Black participants) to ~0.92
-  (Non-Hispanic Asian participants) across race/ethnicity groups never
-  used as model inputs — reported transparently with appropriate sample-
-  size caveats in the [model card](model_card.md).
-- **Age, total cholesterol, and waist circumference are the dominant
-  predictors** across every model tested, consistent with established
-  cardiovascular risk literature.
-
-## Results
-
-### Model performance
-
-| Metric | XGBoost | Random Forest | Logistic Regression | LightGBM | SVM |
-|---|---|---|---|---|---|
-| Accuracy | 0.763 | 0.857 | ~0.72 | 0.736 | 0.709 |
-| AUROC | 0.830 | 0.826 | 0.822 | **0.832** | 0.830 |
-
-*(Full table with Precision/Recall/Specificity/F1 in
-`results/performance_table.csv`; bootstrapped confidence intervals in
-`results/auroc_confidence_intervals.csv`.)*
-
-![ROC Curve Comparison](results/roc_curve_comparison.png)
-
-### Calibration: before and after correction
-
-Training on oversampled data taught every model to over-predict risk.
-Post-hoc Platt scaling fixes this:
-
-![Calibration Before](results/calibration_curves_before.png)
-
-### What drives the predictions (SHAP)
-
-![SHAP Summary](results/shap_summary_plot.png)
-
-### Individual explanations (LIME)
-
-Three example test-set individuals, each with a person-specific
-breakdown of what pushed their predicted risk up or down —
-`results/lime_example_case_*.png`.
-
-### Fairness audit
-
-See `results/fairness_audit_by_sex.csv`, `_by_race_ethnicity.csv`, and
-`_by_age_band.csv`, discussed in full (with appropriate caveats) in the
-[model card](model_card.md).
-
-## Interactive risk calculator
-
-```
+```bash
 streamlit run app/streamlit_app.py
 ```
 
-Enter a hypothetical person's clinical and dietary values and get a
-calibrated risk estimate plus a personalized SHAP explanation of what
-drove that specific prediction.
+Enter a hypothetical patient's clinical and dietary values to obtain a
+calibrated risk estimate with a SHAP-based explanation of the
+prediction. *(Run the notebook once first -- its final step saves the
+model artifact the app depends on.)*
 
-## Methodology
+## Key Results
 
-1. **Data preparation** (`src/data_prep.py`) — NHANES 2017-2023, adults
-   only, complete-case filtering on dietary data, MICE-style imputation
-   for the small remaining gaps in clinical measurements.
+**All five models tested achieve comparable discrimination** (AUROC
+≈ 0.82-0.83), with overlapping bootstrap confidence intervals --
+indicating no single algorithm provides a meaningful advantage on this
+task:
 
-2. **Train/test split BEFORE feature selection.** *(Correctness fix
-   #1.)* Running feature selection on the full dataset before splitting
-   lets the test set quietly influence which variables get chosen — a
-   common but real leakage bug. Here, Recursive Feature Elimination
-   (`src/feature_selection.py`) only ever sees the training split.
+![ROC Curve Comparison](figures/roc_curve_comparison.png)
 
-3. **Oversampling wrapped inside cross-validation, not applied once
-   upfront.** *(Correctness fix #2.)* `RandomOverSampler` works by
-   duplicating minority-class rows. Oversampling once and then
-   cross-validating on that data lets an exact duplicate of the same
-   person land in both a fold's training and validation portion —
-   letting the model partially "see" its own validation answer. This
-   was caught directly during development: it inflated a model's
-   cross-validated AUROC to an implausible **0.99**. The fix
-   (`src/modeling.py`) wraps oversampling as a step inside an
-   `imblearn` Pipeline, so it happens fresh, independently, inside every
-   fold.
+**Age, total cholesterol, and waist circumference are the most
+consistent predictors** across all models tested:
 
-4. **Real hyperparameter tuning.** Every model is tuned via
-   `RandomizedSearchCV` (not copied from literature defaults), with
-   search spaces sized to run in a few minutes on modest hardware.
+![SHAP Summary](figures/shap_summary.png)
 
-5. **Evaluation** (`src/evaluation.py`) — standard metrics, ROC curves,
-   bootstrapped AUROC confidence intervals (2,000 resamples), and
-   calibration curves with Brier scores before/after Platt scaling.
+**Raw predicted probabilities were poorly calibrated** -- every model
+systematically overestimated risk, a direct consequence of training on
+oversampled data. This was identified and corrected via post-hoc
+calibration:
 
-6. **Fairness audit** (`src/fairness.py`) — test-set performance broken
-   down by sex, race/ethnicity (neither used as predictors), and age
-   band.
+| Before Calibration | After Calibration |
+|---|---|
+| ![Before](figures/calibration_before.png) | ![After](figures/calibration_after.png) |
 
-7. **Interpretability** (`src/interpret.py`) — SHAP (global) and LIME
-   (per-person) explanations for the best-performing tree-based model.
-   No variables are manually forced into or out of the model to match
-   any external source; whatever RFE selects is what gets used and
-   interpreted.
+**Subgroup fairness audit:** model discrimination was evaluated
+separately by sex and by race/ethnicity (neither used as a model input)
+to assess whether performance is consistent across demographic groups:
 
-## Repo structure
+![Fairness Check](figures/fairness_check.png)
+
+AUROC ranged from approximately 0.75 (Non-Hispanic Black participants)
+to 0.92 (Non-Hispanic Asian participants) across race/ethnicity groups.
+This gap is reported directly, with sample-size caveats and guidance on
+interpretation, in [`model_card.md`](model_card.md).
+
+## Methodological Notes
+
+Two data leakage issues were identified and corrected during
+development, documented in the notebook at the point they occurred:
+
+1. **Feature selection performed on the full dataset prior to the
+   train/test split** allows test-set information to influence which
+   variables are selected. Corrected by restricting feature selection
+   to the training partition only.
+2. **Oversampling applied once, prior to cross-validation**, allows
+   duplicate observations (produced by the oversampling process) to
+   span both the training and validation partitions of a fold,
+   inflating validation performance. This was identified during
+   development, where it produced a cross-validated AUROC of 0.99 --
+   implausibly high for this task. It was corrected by encapsulating
+   oversampling as a pipeline step, refit independently within each
+   cross-validation fold.
+
+## Repository Structure
 
 ```
-├── run_analysis.py          # main entry point -- runs the full pipeline
-├── src/
-│   ├── config.py            # paths, variable lists, readable names
-│   ├── data_prep.py         # loading, cleaning, imputation
-│   ├── feature_selection.py # leakage-safe RFE
-│   ├── modeling.py          # train/test split, tuning, leakage-safe oversampling
-│   ├── evaluation.py        # metrics, ROC, bootstrap CI, calibration
-│   ├── fairness.py          # subgroup performance audit
-│   └── interpret.py         # SHAP + LIME
+├── CVD_Risk_Prediction.ipynb   # complete analysis, single notebook
+├── data/
+│   └── README.md               # data source and expected format
+├── figures/                    # figures generated by the notebook
 ├── app/
-│   └── streamlit_app.py     # interactive risk calculator
-├── results/                 # generated tables and figures
-├── model_card.md            # full model documentation
+│   └── streamlit_app.py        # interactive risk calculator
+├── model_card.md                # model documentation, including fairness audit
 └── requirements.txt
 ```
 
-## How to run
+## Running This Project
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Edit `RAW_DATA_PATH` in `src/config.py` to point at your NHANES extract,
-then:
-
-```bash
-python run_analysis.py       # trains everything, populates results/
-streamlit run app/streamlit_app.py   # launches the interactive calculator
-```
-
-Data source: [NHANES](https://www.cdc.gov/nchs/nhanes), National Center
-for Health Statistics (public, de-identified).
+1. Place your NHANES data extract in `data/` (see `data/README.md`).
+2. Open `CVD_Risk_Prediction.ipynb` and update the file path in the
+   first code cell.
+3. Run all cells, top to bottom.
+4. Optionally, launch the interactive demo:
+   `streamlit run app/streamlit_app.py`
 
 ## Limitations
 
-See the [model card](model_card.md) for the full discussion, including
-self-reported outcome data, cross-sectional design (no causal claims),
-missing medication-use data, and the fairness audit's sample-size
-caveats. This is a portfolio/research project, not a validated clinical
-tool.
+This is a portfolio/research project and is not a validated clinical
+tool. See [`model_card.md`](model_card.md) for a complete discussion of
+limitations, including the subgroup fairness findings above.
 
 ## Acknowledgments
 
@@ -191,3 +115,6 @@ Approach inspired by Ahiduzzaman, M. & Hasan, M.N. (2025). Interpretable
 machine learning for cardiovascular risk prediction: Insights from
 NHANES dietary and health data. *PLoS One, 20*(11), e0335915.
 https://doi.org/10.1371/journal.pone.0335915
+
+Data source: [NHANES](https://www.cdc.gov/nchs/nhanes), National Center
+for Health Statistics (public, de-identified).
