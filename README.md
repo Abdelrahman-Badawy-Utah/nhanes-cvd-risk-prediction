@@ -99,12 +99,7 @@ development, documented in the notebook at the point they occurred:
 pip install -r requirements.txt
 ```
 
-1. Place your NHANES data extract in `data/` (see `data/README.md`).
-2. Open `CVD_Risk_Prediction.ipynb` and update the file path in the
-   first code cell.
-3. Run all cells, top to bottom.
-4. Optionally, launch the interactive demo:
-   `streamlit run app/streamlit_app.py`
+Refer to the "CVD_Risk_Prediction.ipynb" Notebook. 
 
 ## Limitations
 
