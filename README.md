@@ -15,6 +15,11 @@ included here as additional predictors beyond the original paper's
 scope, mirroring inputs used by established clinical risk tools such as
 the ACC/AHA Pooled Cohort Equations and the AHA PREVENT calculator.
 
+**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
+
+**The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
+a single notebook with rationale and interpretation preceding each step.
+
 ## Interactive Demo
 
 **[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
@@ -37,10 +42,10 @@ task:
 
 ![ROC Curve Comparison](figures/roc_curve_comparison.png)
 
-**Age, total cholesterol, and waist circumference are the strongest
-overall predictors. Notably, all three newly added clinical
-predictors -- estimated kidney function (eGFR), diabetes status, and
-HDL cholesterol -- rank among the top 6**, each showing the clinically
+**Age, total cholesterol, and smoking status are the strongest overall
+predictors. All four newly added clinical predictors -- smoking status,
+estimated kidney function (eGFR), diabetes status, and HDL
+cholesterol -- rank among the top 6**, each showing the clinically
 expected direction of effect:
 
 ![SHAP Summary](figures/shap_summary.png)
@@ -60,9 +65,9 @@ to assess whether performance is consistent across demographic groups:
 
 ![Fairness Check](figures/fairness_check.png)
 
-AUROC ranged from approximately 0.79 (Non-Hispanic Black participants)
-to 0.84 (Other Hispanic participants) across race/ethnicity groups, and
-from 0.80 (female) to 0.83 (male) by sex. These gaps are reported
+AUROC ranged from approximately 0.80 (Non-Hispanic Black participants)
+to 0.85 (Other Hispanic participants) across race/ethnicity groups, and
+from 0.81 (female) to 0.83 (male) by sex. These gaps are reported
 directly, with sample-size caveats and guidance on interpretation, in
 [`model_card.md`](model_card.md).
 
@@ -84,13 +89,16 @@ development, documented in the notebook at the point they occurred:
    oversampling as a pipeline step, refit independently within each
    cross-validation fold.
 
-**A note on smoking status:** smoking status was not selected by the
-automatic feature selection step in the current run. This does not
-indicate smoking is unimportant for cardiovascular risk in general --
-its signal likely overlaps with the other newly added predictors
-(diabetes, kidney function, HDL), and Recursive Feature Elimination
-tends to keep one representative of a correlated cluster of risk
-factors rather than all of them. See `model_card.md` for further
+**A note on smoking status -- a deliberate, disclosed override:**
+smoking status was not selected by the automatic feature selection step
+once HDL, diabetes status, and eGFR were added, most likely due to
+overlapping signal among these newly added predictors. Given smoking's
+well-established, independent role in cardiovascular risk, it was
+deliberately retained as an explicitly documented override of the
+automatic selection (Section 7 of the notebook) -- rather than silently
+dropped or silently forced in. This override was verified empirically
+rather than assumed: once retained, smoking status ranked **third
+overall** by SHAP importance. See `model_card.md` for the full
 discussion.
 
 ## Repository Structure

@@ -28,33 +28,44 @@ randomly selected CVD-positive individual above a randomly selected
 CVD-negative individual about 81-82% of the time. No model showed a
 statistically meaningful advantage over the others.
 
-The strongest and most consistent predictors were **age**, **total
-cholesterol**, and **waist circumference**. Notably, all three newly
-added clinical predictors -- **estimated kidney function (eGFR)**,
-**diabetes status**, and **HDL cholesterol** -- ranked among the top 6
-predictors by SHAP importance, each in the clinically expected
-direction: lower eGFR (worse kidney function), having diabetes, and
-lower HDL cholesterol were each associated with higher predicted risk.
+The strongest predictors overall were **age**, **total cholesterol**,
+and **smoking status**. All four newly added predictors in this
+project -- smoking status, estimated kidney function (eGFR), diabetes
+status, and HDL cholesterol -- ranked among the top 6 predictors by
+SHAP importance, each in the clinically expected direction: current/
+former smoking, lower eGFR, having diabetes, and lower HDL cholesterol
+were each associated with higher predicted risk.
 
-## A Note on Smoking Status
+## A Note on Smoking Status: A Deliberate Override
 
-Smoking status -- also newly added to this project, alongside HDL,
-diabetes status, and eGFR -- was **not** selected by the automatic
-feature selection step (Recursive Feature Elimination) in the current
-run. This is a genuine, reported result, not an error.
+Smoking status was **not** selected by the automatic feature selection
+step (Recursive Feature Elimination) once HDL, diabetes status, and
+eGFR were added to the candidate predictor list -- likely because its
+signal overlaps substantially with these other newly added predictors,
+which are known to correlate with smoking history at a population
+level. Feature selection methods like RFE tend to retain one
+representative from a cluster of correlated risk factors rather than
+all of them; a variable being dropped reflects redundancy with other
+selected variables, not necessarily a lack of real-world importance.
 
-This does not mean smoking is unimportant for cardiovascular risk in
-general; it is one of the most well-established cardiovascular risk
-factors in the clinical literature. A more likely explanation is that
-feature selection methods like RFE tend to keep one representative from
-a cluster of correlated risk factors rather than all of them, and
-smoking's signal in this dataset likely overlaps substantially with the
-other newly added predictors (diabetes status, kidney function, and
-HDL cholesterol are all known to correlate with smoking history at the
-population level). This is a useful illustration of a general
-limitation of automatic feature selection: a variable being dropped
-reflects redundancy with other selected variables, not necessarily a
-lack of real-world importance.
+Given smoking's well-established, independent role in cardiovascular
+risk in the clinical literature, it was **deliberately retained as an
+explicitly documented override** of the automatic selection, rather
+than silently dropped or silently forced in without comment (see
+Section 7 of the notebook). This override was then checked empirically
+rather than assumed to be justified: once retained, smoking status
+ranked **third overall** by SHAP importance -- ahead of eGFR, waist
+circumference, diabetes status, and HDL cholesterol -- confirming it
+carries substantial, largely non-redundant predictive signal in this
+dataset. Overall model discrimination (AUROC) was also marginally
+higher with smoking status included than without it.
+
+This is presented as a case study in a broader principle: automatic
+feature selection is a reasonable default, but overriding it can be
+justified when there is strong external evidence for a variable's
+importance -- provided the override is disclosed and its impact is
+verified empirically, exactly as done here, rather than asserted
+without evidence.
 
 ## Calibration
 
@@ -79,9 +90,9 @@ directly rather than assuming uniformity from an overall metric.
 **Findings:**
 
 - **By sex:** AUROC was approximately 0.83 for male participants and
-  0.80 for female participants -- a modest but measurable difference.
-- **By race/ethnicity:** AUROC ranged from approximately 0.79
-  (Non-Hispanic Black participants) to 0.84 (Other Hispanic
+  0.81 for female participants -- a modest but measurable difference.
+- **By race/ethnicity:** AUROC ranged from approximately 0.80
+  (Non-Hispanic Black participants) to 0.85 (Other Hispanic
   participants). In practical terms, this indicates the model's risk
   estimates are currently less reliable for Non-Hispanic Black patients
   than for several other groups in this dataset.
@@ -139,8 +150,7 @@ application affecting an individual's healthcare or opportunities.
   level), all of which are clinically relevant to cardiovascular risk.
 - **Smoking status is coarse.** The current/former/never categorization
   does not capture intensity (cigarettes per day) or duration, both
-  clinically relevant -- and, as noted above, was not selected as a
-  model predictor in the current run despite being a candidate.
+  clinically relevant.
 
 ## Requirements for Real-World Use
 
