@@ -98,7 +98,8 @@ FEATURE_GROUPS = {
         "RIDAGEYR", "BMXBMI", "BMXWAIST", "SBP1", "DBP1",
         "LBXTC", "HDL", "LBXHSCRP", "eGFR",
     ],
-    "Smoking & Diabetes History": ["smoking_status", "diabetes_status"],
+    "Smoking History": ["smoking_status"],
+    "Diabetes History": ["diabetes_status"],
     "Diet (from a single day's recall)": [
         "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TCHOL", "DR1TBCAR", "DR1TNIAC", "DR1TVB2", "DR1TVB6",
         "DR1TFF", "DR1TIRON", "DR1TVB12", "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP",
