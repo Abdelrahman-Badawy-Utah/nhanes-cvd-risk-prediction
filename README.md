@@ -15,12 +15,6 @@ included here as additional predictors beyond the original paper's
 scope, mirroring inputs used by established clinical risk tools such as
 the ACC/AHA Pooled Cohort Equations and the AHA PREVENT calculator.
 
-**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
-
-**The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
-a single notebook with rationale and interpretation preceding each step,
-readable as a standalone technical report.
-
 ## Interactive Demo
 
 **[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
@@ -33,8 +27,6 @@ To run it locally instead:
 ```bash
 streamlit run app/streamlit_app.py
 ```
-*(Run the notebook once first -- its final step saves the model
-artifact the app depends on.)*
 
 ## Key Results
 
