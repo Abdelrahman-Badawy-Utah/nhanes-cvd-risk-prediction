@@ -1,12 +1,19 @@
 """
 streamlit_app.py
 ================
-An interactive CVD risk calculator. Enter a hypothetical person's health
-and diet numbers, and see:
+An interactive CVD risk calculator. Enter a hypothetical person's health,
+diet, and smoking status, and see:
   1. Their predicted CVD risk (a genuinely trustworthy percentage,
      thanks to the calibration fix explained in the notebook)
   2. A plain-English explanation of what pushed THEIR risk up or down
 
+BEFORE RUNNING THIS APP: you must first run the notebook
+(CVD_Risk_Prediction.ipynb) once, start to finish. The last cell of the
+notebook saves the trained model to app/model/best_model_artifact.pkl --
+this app simply loads that file and uses it to make live predictions.
+
+Run with:
+    streamlit run app/streamlit_app.py
 
 IMPORTANT: this is a portfolio / demonstration project, not a medical
 device. See the big warning banner in the app itself.
@@ -27,28 +34,28 @@ import matplotlib.pyplot as plt
 APP_DIR = os.path.dirname(os.path.abspath(__file__))
 ARTIFACT_PATH = os.path.join(APP_DIR, "model", "best_model_artifact.pkl")
 
-# Plain-English names for every possible factor (a superset -- whichever
-# ones the notebook actually selected will be looked up from here)
 READABLE_NAMES = {
     "DR1TPROT": "Protein (g)", "DR1TCARB": "Carbohydrates (g)", "DR1TSUGR": "Total Sugars (g)",
     "DR1TFIBE": "Fiber (g)", "DR1TSFAT": "Saturated Fat (g)", "DR1TMFAT": "Monounsaturated Fat (g)",
     "DR1TPFAT": "Polyunsaturated Fat (g)", "DR1TCHOL": "Dietary Cholesterol (mg)",
     "DR1TBCAR": "Beta-Carotene (mcg)", "DR1TCRYP": "Beta-Cryptoxanthin (mcg)", "DR1TLYCO": "Lycopene (mcg)",
-    "DR1TTHEO": "Theobromine (mg)", "DR1TNIAC": "Niacin / Vitamin B3 (mg)", "DR1TVB6": "Vitamin B6 (mg)",
+    "DR1TVB1": "Thiamin / Vitamin B1 (mg)", "DR1TVB2": "Riboflavin / Vitamin B2 (mg)",
+    "DR1TNIAC": "Niacin / Vitamin B3 (mg)", "DR1TVB6": "Vitamin B6 (mg)",
     "DR1TFOLA": "Total Folate (mcg)", "DR1TFF": "Food Folate (mcg)", "DR1TIRON": "Iron (mg)",
-    "DR1TVB12": "Vitamin B12 (mcg)", "DR1TVC": "Vitamin C (mg)", "DR1TVD": "Vitamin D (mcg)",
-    "DR1TATOC": "Vitamin E (mg)", "DR1TVK": "Vitamin K (mcg)", "DR1TCALC": "Calcium (mg)",
-    "DR1TPHOS": "Phosphorus (mg)", "DR1TMAGN": "Magnesium (mg)", "DR1TZINC": "Zinc (mg)",
-    "DR1TCOPP": "Copper (mg)", "DR1TSODI": "Sodium (mg)", "DR1TPOTA": "Potassium (mg)",
-    "DR1TSELE": "Selenium (mcg)", "DR1TMOIS": "Food Moisture / Water Content (g)",
+    "DR1TCHL": "Total Choline (mg)", "DR1TVB12": "Vitamin B12 (mcg)", "DR1TVC": "Vitamin C (mg)",
+    "DR1TVD": "Vitamin D (mcg)", "DR1TATOC": "Vitamin E (mg)", "DR1TVK": "Vitamin K (mcg)",
+    "DR1TCALC": "Calcium (mg)", "DR1TPHOS": "Phosphorus (mg)", "DR1TMAGN": "Magnesium (mg)",
+    "DR1TZINC": "Zinc (mg)", "DR1TCOPP": "Copper (mg)", "DR1TSODI": "Sodium (mg)",
+    "DR1TPOTA": "Potassium (mg)", "DR1TSELE": "Selenium (mcg)", "DR1TMOIS": "Food Moisture / Water Content (g)",
     "BMXBMI": "Body Mass Index (BMI)", "BMXWAIST": "Waist Circumference (cm)",
     "SBP1": "Systolic Blood Pressure (mmHg)", "DBP1": "Diastolic Blood Pressure (mmHg)",
     "LBXTC": "Total Cholesterol (mg/dL)", "LBXHSCRP": "C-Reactive Protein (CRP, mg/L)",
     "RIDAGEYR": "Age (years)",
+    "smoking_status": "Smoking Status",
 }
 
 # Reasonable slider ranges: (min, max, default, step)
-FEATURE_INPUT_CONFIG = {
+NUMERIC_FEATURE_CONFIG = {
     "RIDAGEYR": (18, 85, 50, 1),
     "BMXBMI": (15.0, 60.0, 27.0, 0.5),
     "BMXWAIST": (60.0, 165.0, 95.0, 1.0),
@@ -59,6 +66,7 @@ FEATURE_INPUT_CONFIG = {
     "DR1TPROT": (0, 260, 75, 1),
     "DR1TCARB": (0, 750, 220, 5),
     "DR1TSUGR": (0, 275, 85, 1),
+    "DR1TCHOL": (0, 1000, 280, 5),
     "DR1TBCAR": (0, 30000, 2000, 100),
     "DR1TNIAC": (0.0, 100.0, 22.0, 1.0),
     "DR1TVB6": (0.0, 9.0, 2.0, 0.1),
@@ -75,10 +83,15 @@ FEATURE_INPUT_CONFIG = {
     "DR1TMOIS": (250, 13800, 2650, 50),
 }
 
+# Smoking status is categorical (0=never, 1=former, 2=current), handled with
+# a selectbox rather than a slider.
+SMOKING_OPTIONS = {"Never smoked": 0, "Former smoker": 1, "Current smoker": 2}
+
 FEATURE_GROUPS = {
     "Clinical Measurements": ["RIDAGEYR", "BMXBMI", "BMXWAIST", "SBP1", "DBP1", "LBXTC", "LBXHSCRP"],
+    "Smoking History": ["smoking_status"],
     "Diet (from a single day's recall)": [
-        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TBCAR", "DR1TNIAC", "DR1TVB6", "DR1TFF",
+        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TCHOL", "DR1TBCAR", "DR1TNIAC", "DR1TVB6", "DR1TFF",
         "DR1TIRON", "DR1TVB12", "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP",
         "DR1TSODI", "DR1TPOTA", "DR1TMOIS",
     ],
@@ -171,11 +184,15 @@ def main():
             continue
         st.sidebar.subheader(group_name)
         for feature in available:
-            min_v, max_v, default_v, step_v = FEATURE_INPUT_CONFIG[feature]
-            label = READABLE_NAMES.get(feature, feature)
-            input_values[feature] = st.sidebar.slider(
-                label, min_value=min_v, max_value=max_v, value=default_v, step=step_v
-            )
+            if feature == "smoking_status":
+                label = st.sidebar.selectbox("Smoking status", list(SMOKING_OPTIONS.keys()), index=0)
+                input_values[feature] = SMOKING_OPTIONS[label]
+            else:
+                min_v, max_v, default_v, step_v = NUMERIC_FEATURE_CONFIG[feature]
+                label = READABLE_NAMES.get(feature, feature)
+                input_values[feature] = st.sidebar.slider(
+                    label, min_value=min_v, max_value=max_v, value=default_v, step=step_v
+                )
 
     for feature in artifact["selected_features"]:
         if feature not in input_values:
@@ -210,7 +227,7 @@ def main():
     st.divider()
     st.caption(
         "Data source: National Health and Nutrition Examination Survey "
-        "(NHANES) 2017-2023, National Center for Health Statistics. "
+        "(NHANES) 2015-2023, National Center for Health Statistics. "
         "Educational/portfolio use only."
     )
 

@@ -19,3 +19,8 @@ Thumbs.db
 # Editor
 .vscode/
 .idea/
+
+# R session artifacts
+.RData
+.Rhistory
+*.rds
