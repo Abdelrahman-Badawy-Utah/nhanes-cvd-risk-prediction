@@ -1,16 +1,21 @@
 # Cardiovascular Disease Risk Prediction from NHANES Data
 
 A machine learning pipeline that estimates cardiovascular disease (CVD)
-risk from age, blood pressure, cholesterol, body measurements, smoking
-status, and dietary intake, using public U.S. health survey data
-(NHANES). The project emphasizes methodological rigor: leakage-safe
-cross-validation, real hyperparameter tuning, verified and corrected
-probability calibration, and a subgroup fairness audit.
+risk from age, blood pressure, cholesterol (total and HDL), kidney
+function, diabetes status, smoking status, body measurements, and
+dietary intake, using public U.S. health survey data (NHANES). The
+project emphasizes methodological rigor: leakage-safe cross-validation,
+real hyperparameter tuning, verified and corrected probability
+calibration, and a subgroup fairness audit.
 
 Inspired by Ahiduzzaman & Hasan (2025), *"Interpretable machine learning
-for cardiovascular risk prediction,"* PLoS One. Smoking status is
-included here as an additional predictor beyond the original paper's
-scope, given its established role in cardiovascular risk.
+for cardiovascular risk prediction,"* PLoS One. Smoking status, HDL
+cholesterol, diabetes status, and estimated kidney function (eGFR) are
+included here as additional predictors beyond the original paper's
+scope, mirroring inputs used by established clinical risk tools such as
+the ACC/AHA Pooled Cohort Equations and the AHA PREVENT calculator.
+
+**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
 
 **The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
 a single notebook with rationale and interpretation preceding each step,
@@ -18,14 +23,18 @@ readable as a standalone technical report.
 
 ## Interactive Demo
 
+**[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
+
+Enter a hypothetical patient's clinical, smoking, diabetes, and dietary
+values to obtain a calibrated risk estimate with a SHAP-based
+explanation of the prediction.
+
+To run it locally instead:
 ```bash
 streamlit run app/streamlit_app.py
 ```
-
-Enter a hypothetical patient's clinical, smoking, and dietary values to
-obtain a calibrated risk estimate with a SHAP-based explanation of the
-prediction. *(Run the notebook once first -- its final step saves the
-model artifact the app depends on.)*
+*(Run the notebook once first -- its final step saves the model
+artifact the app depends on.)*
 
 ## Key Results
 
@@ -36,9 +45,11 @@ task:
 
 ![ROC Curve Comparison](figures/roc_curve_comparison.png)
 
-**Age, total cholesterol, and smoking status are the most consistent
-predictors**, with smoking ranking third overall -- ahead of waist
-circumference and blood pressure:
+**Age, total cholesterol, and waist circumference are the strongest
+overall predictors. Notably, all three newly added clinical
+predictors -- estimated kidney function (eGFR), diabetes status, and
+HDL cholesterol -- rank among the top 6**, each showing the clinically
+expected direction of effect:
 
 ![SHAP Summary](figures/shap_summary.png)
 
@@ -57,11 +68,11 @@ to assess whether performance is consistent across demographic groups:
 
 ![Fairness Check](figures/fairness_check.png)
 
-AUROC ranged from approximately 0.78 (Other/Multiracial and Non-Hispanic
-Black participants) to 0.85 (Mexican American participants) across
-race/ethnicity groups, and from 0.79 (female) to 0.84 (male) by sex.
-These gaps are reported directly, with sample-size caveats and guidance
-on interpretation, in [`model_card.md`](model_card.md).
+AUROC ranged from approximately 0.79 (Non-Hispanic Black participants)
+to 0.84 (Other Hispanic participants) across race/ethnicity groups, and
+from 0.80 (female) to 0.83 (male) by sex. These gaps are reported
+directly, with sample-size caveats and guidance on interpretation, in
+[`model_card.md`](model_card.md).
 
 ## Methodological Notes
 
@@ -80,6 +91,15 @@ development, documented in the notebook at the point they occurred:
    implausibly high for this task. It was corrected by encapsulating
    oversampling as a pipeline step, refit independently within each
    cross-validation fold.
+
+**A note on smoking status:** smoking status was not selected by the
+automatic feature selection step in the current run. This does not
+indicate smoking is unimportant for cardiovascular risk in general --
+its signal likely overlaps with the other newly added predictors
+(diabetes, kidney function, HDL), and Recursive Feature Elimination
+tends to keep one representative of a correlated cluster of risk
+factors rather than all of them. See `model_card.md` for further
+discussion.
 
 ## Repository Structure
 

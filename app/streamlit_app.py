@@ -2,7 +2,7 @@
 streamlit_app.py
 ================
 An interactive CVD risk calculator. Enter a hypothetical person's health,
-diet, and smoking status, and see:
+diet, smoking, and diabetes status, and see:
   1. Their predicted CVD risk (a genuinely trustworthy percentage,
      thanks to the calibration fix explained in the notebook)
   2. A plain-English explanation of what pushed THEIR risk up or down
@@ -49,9 +49,11 @@ READABLE_NAMES = {
     "DR1TPOTA": "Potassium (mg)", "DR1TSELE": "Selenium (mcg)", "DR1TMOIS": "Food Moisture / Water Content (g)",
     "BMXBMI": "Body Mass Index (BMI)", "BMXWAIST": "Waist Circumference (cm)",
     "SBP1": "Systolic Blood Pressure (mmHg)", "DBP1": "Diastolic Blood Pressure (mmHg)",
-    "LBXTC": "Total Cholesterol (mg/dL)", "LBXHSCRP": "C-Reactive Protein (CRP, mg/L)",
+    "LBXTC": "Total Cholesterol (mg/dL)", "HDL": "HDL Cholesterol (mg/dL)",
+    "LBXHSCRP": "C-Reactive Protein (CRP, mg/L)", "eGFR": "Estimated Kidney Function (eGFR)",
     "RIDAGEYR": "Age (years)",
     "smoking_status": "Smoking Status",
+    "diabetes_status": "Diabetes Status",
 }
 
 # Reasonable slider ranges: (min, max, default, step)
@@ -62,13 +64,16 @@ NUMERIC_FEATURE_CONFIG = {
     "SBP1": (90, 220, 120, 1),
     "DBP1": (40, 120, 78, 1),
     "LBXTC": (80, 300, 190, 1),
+    "HDL": (10, 130, 53, 1),
     "LBXHSCRP": (0.0, 35.0, 2.0, 0.1),
+    "eGFR": (5, 165, 95, 1),
     "DR1TPROT": (0, 260, 75, 1),
     "DR1TCARB": (0, 750, 220, 5),
     "DR1TSUGR": (0, 275, 85, 1),
     "DR1TCHOL": (0, 1000, 280, 5),
     "DR1TBCAR": (0, 30000, 2000, 100),
     "DR1TNIAC": (0.0, 100.0, 22.0, 1.0),
+    "DR1TVB2": (0.0, 6.0, 1.9, 0.1),
     "DR1TVB6": (0.0, 9.0, 2.0, 0.1),
     "DR1TFF": (0, 850, 200, 5),
     "DR1TIRON": (0.0, 60.0, 15.0, 0.5),
@@ -83,16 +88,20 @@ NUMERIC_FEATURE_CONFIG = {
     "DR1TMOIS": (250, 13800, 2650, 50),
 }
 
-# Smoking status is categorical (0=never, 1=former, 2=current), handled with
-# a selectbox rather than a slider.
+# Both smoking status and diabetes status are categorical, handled with
+# selectboxes rather than sliders.
 SMOKING_OPTIONS = {"Never smoked": 0, "Former smoker": 1, "Current smoker": 2}
+DIABETES_OPTIONS = {"No": 0, "Yes": 1}
 
 FEATURE_GROUPS = {
-    "Clinical Measurements": ["RIDAGEYR", "BMXBMI", "BMXWAIST", "SBP1", "DBP1", "LBXTC", "LBXHSCRP"],
-    "Smoking History": ["smoking_status"],
+    "Clinical Measurements": [
+        "RIDAGEYR", "BMXBMI", "BMXWAIST", "SBP1", "DBP1",
+        "LBXTC", "HDL", "LBXHSCRP", "eGFR",
+    ],
+    "Smoking & Diabetes History": ["smoking_status", "diabetes_status"],
     "Diet (from a single day's recall)": [
-        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TCHOL", "DR1TBCAR", "DR1TNIAC", "DR1TVB6", "DR1TFF",
-        "DR1TIRON", "DR1TVB12", "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP",
+        "DR1TPROT", "DR1TCARB", "DR1TSUGR", "DR1TCHOL", "DR1TBCAR", "DR1TNIAC", "DR1TVB2", "DR1TVB6",
+        "DR1TFF", "DR1TIRON", "DR1TVB12", "DR1TVC", "DR1TVK", "DR1TCALC", "DR1TMAGN", "DR1TCOPP",
         "DR1TSODI", "DR1TPOTA", "DR1TMOIS",
     ],
 }
@@ -187,6 +196,9 @@ def main():
             if feature == "smoking_status":
                 label = st.sidebar.selectbox("Smoking status", list(SMOKING_OPTIONS.keys()), index=0)
                 input_values[feature] = SMOKING_OPTIONS[label]
+            elif feature == "diabetes_status":
+                label = st.sidebar.selectbox("Diabetes", list(DIABETES_OPTIONS.keys()), index=0)
+                input_values[feature] = DIABETES_OPTIONS[label]
             else:
                 min_v, max_v, default_v, step_v = NUMERIC_FEATURE_CONFIG[feature]
                 label = READABLE_NAMES.get(feature, feature)
