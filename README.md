@@ -13,19 +13,22 @@ included here as an additional predictor beyond the original paper's
 scope, given its established role in cardiovascular risk.
 
 **The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
-a single notebook with rationale and interpretation preceding each step,
-readable as a standalone technical report.
+a single notebook with rationale and interpretation preceding each step.
 
-## Interactive Demo
+**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
 
-```bash
-streamlit run app/streamlit_app.py
-```
+### Interactive Demo
+
+**[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
 
 Enter a hypothetical patient's clinical, smoking, and dietary values to
 obtain a calibrated risk estimate with a SHAP-based explanation of the
-prediction. *(Run the notebook once first -- its final step saves the
-model artifact the app depends on.)*
+prediction.
+
+To run it locally instead:
+```bash
+streamlit run app/streamlit_app.py
+```
 
 ## Key Results
 
