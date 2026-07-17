@@ -15,14 +15,14 @@ included here as additional predictors beyond the original paper's
 scope, mirroring inputs used by established clinical risk tools such as
 the ACC/AHA Pooled Cohort Equations and the AHA PREVENT calculator.
 
-**[Live demo](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)** · **[Model card](model_card.md)**
+**[Live demo](https://nhanes-cvd-risk-prediction-umumw5ehtj7ur3jd9uxatz.streamlit.app/)** · **[Model card](model_card.md)**
 
 **The complete analysis is in [`CVD_Risk_Prediction.ipynb`](CVD_Risk_Prediction.ipynb)** --
 a single notebook with rationale and interpretation preceding each step.
 
 ## Interactive Demo
 
-**[Try the live risk calculator](https://nhanes-cvd-risk-prediction-iiweewaykdo883ffw3cksj.streamlit.app/)**
+**[Try the live risk calculator](https://nhanes-cvd-risk-prediction-umumw5ehtj7ur3jd9uxatz.streamlit.app/)**
 
 Enter a hypothetical patient's clinical, smoking, diabetes, and dietary
 values to obtain a calibrated risk estimate with a SHAP-based
